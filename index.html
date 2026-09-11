@@ -1,0 +1,2586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Useless Computer Simulator - The Peak of Digital Inefficiency</title>
+  <meta name="description" content="A stunning modern desktop operating system where absolutely nothing useful ever happens." />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='14' x='2' y='3' rx='2'/><line x1='8' x2='16' y1='21' y2='21'/><line x1='12' x2='12' y1='17' y2='21'/></svg>" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          animation: {
+            'shake': 'shake 0.4s ease-in-out',
+            'fade-in': 'fadeIn 0.2s ease-out',
+            'scale-in': 'scaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
+            'pulse-subtle': 'pulseSubtle 2s infinite ease-in-out',
+            'spin-slow': 'spin 8s linear infinite',
+          },
+          keyframes: {
+            shake: {
+              '0%, 100%': { transform: 'translateX(0)' },
+              '20%, 60%': { transform: 'translateX(-7px)' },
+              '40%, 80%': { transform: 'translateX(7px)' },
+            },
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            scaleIn: {
+              '0%': { opacity: '0', transform: 'scale(0.94)' },
+              '100%': { opacity: '1', transform: 'scale(1)' },
+            },
+            pulseSubtle: {
+              '0%, 100%': { opacity: '1' },
+              '50%': { opacity: '0.6' },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- React 18 and Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    * {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #020617;
+      color: #f8fafc;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.25);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.4);
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+    }
+    .glass-taskbar {
+      background: rgba(10, 15, 30, 0.78);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.5);
+    }
+    .glass-window {
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+    }
+    .scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+    }
+  </style>
+</head>
+<body class="h-screen w-screen overflow-hidden select-none">
+  <div id="root" class="h-full w-full"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback, createContext, useContext } = React;
+
+    // --- SOUND SYNTHESIZER (Native Web Audio API) ---
+    class SoundSynthesizer {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+      }
+      init() {
+        if (!this.ctx && typeof window !== 'undefined') {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+      playClick() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(300, this.ctx.currentTime + 0.04);
+          gain.gain.setValueAtTime(0.12, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.04);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.04);
+        } catch(e) {}
+      }
+      playNotification() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc1 = this.ctx.createOscillator();
+          const gain1 = this.ctx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(587.33, now);
+          gain1.gain.setValueAtTime(0.14, now);
+          gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+          osc1.connect(gain1);
+          gain1.connect(this.ctx.destination);
+          osc1.start(now);
+          osc1.stop(now + 0.18);
+
+          const osc2 = this.ctx.createOscillator();
+          const gain2 = this.ctx.createGain();
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(880, now + 0.09);
+          gain2.gain.setValueAtTime(0.16, now + 0.09);
+          gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+          osc2.connect(gain2);
+          gain2.connect(this.ctx.destination);
+          osc2.start(now + 0.09);
+          osc2.stop(now + 0.35);
+        } catch(e) {}
+      }
+      playError() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(150, now);
+          osc.frequency.linearRampToValueAtTime(110, now + 0.22);
+          gain.gain.setValueAtTime(0.2, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.22);
+        } catch(e) {}
+      }
+      playPrinterStep() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(160, now + 0.06);
+          gain.gain.setValueAtTime(0.08, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.06);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.06);
+        } catch(e) {}
+      }
+      playFanfare() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          [440, 554.37, 659.25, 880].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            const start = now + idx * 0.08;
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, start);
+            gain.gain.setValueAtTime(0.18, start);
+            gain.gain.exponentialRampToValueAtTime(0.01, start + 0.25);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(start);
+            osc.stop(start + 0.25);
+          });
+        } catch(e) {}
+      }
+    }
+    const soundEngine = new SoundSynthesizer();
+
+    // --- SVG ICONS SYSTEM (Built-in, zero dependency) ---
+    const Icons = {
+      FileText: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+      ),
+      Folder: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+      ),
+      Trash2: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+        </svg>
+      ),
+      Settings: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      ),
+      Printer: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+        </svg>
+      ),
+      Compass: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+        </svg>
+      ),
+      Calculator: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/>
+        </svg>
+      ),
+      FileEdit: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M4 13.5V4a2 2 0 0 1 2-2h8.5L20 7.5V20a2 2 0 0 1-2 2h-5.5"/><polyline points="14 2 14 8 20 8"/><path d="M10.42 12.61a2.1 2.1 0 1 1 2.97 2.97L7.95 21 4 22l.99-3.95 5.43-5.44Z"/>
+        </svg>
+      ),
+      Palette: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>
+        </svg>
+      ),
+      Music: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+        </svg>
+      ),
+      Camera: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+        </svg>
+      ),
+      CloudSun: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12 2v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="M20 12h2"/><path d="m19.07 4.93-1.41 1.41"/><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128"/><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"/>
+        </svg>
+      ),
+      Calendar: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      ),
+      Activity: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      ),
+      Zap: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      ),
+      ShieldAlert: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      ),
+      Bell: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+      ),
+      Wifi: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/>
+        </svg>
+      ),
+      Volume2: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+        </svg>
+      ),
+      VolumeX: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+        </svg>
+      ),
+      Search: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      ),
+      X: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      ),
+      Minus: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      ),
+      Square: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        </svg>
+      ),
+      Power: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+        </svg>
+      ),
+      RotateCcw: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+        </svg>
+      ),
+      Moon: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+        </svg>
+      ),
+      Trophy: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+        </svg>
+      ),
+      AlertTriangle: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      ),
+      CheckCircle2: (props) => (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/>
+        </svg>
+      ),
+    };
+
+    function DynamicIcon({ name, className = "w-5 h-5", ...rest }) {
+      const Component = Icons[name] || Icons.Square;
+      return <Component className={className} {...rest} />;
+    }
+
+    // --- REQUIRED EXACT MESSAGES & DATA ---
+    const REQUIRED_MESSAGES = {
+      PRINT: "Wasting some ink...",
+      PRINT_DONE: "Printer successfully wasted ink.",
+      FILE_ICON: "Better luck next time.",
+      FOLDER_ICON: "Better luck next time.",
+      RECYCLE_BIN: "Here is the place where stuff goes to disappear.",
+      TASKBAR: "I'm the multi-tasking disaster bar.",
+      START_MENU: "Click here and hope.",
+      SETTINGS: "Fix it yourself zone.",
+      SEARCH: "Where is it?",
+      NOTIFICATIONS: "Attention please, there is no messages for you.",
+      NETWORK: "The network isn't networking.",
+    };
+
+    const FAKE_APPS = [
+      { id: 'my-files', title: 'My Files', description: 'The files are exploring you.', iconName: 'FileText', defaultWidth: 500, defaultHeight: 400, onDesktop: true, directAction: 'refuse-files' },
+      { id: 'important-stuff', title: 'Important Stuff', description: 'Secret documents that do not exist.', iconName: 'Folder', defaultWidth: 500, defaultHeight: 400, onDesktop: true, directAction: 'refuse-folder' },
+      { id: 'recycle-bin', title: 'Recycle Bin', description: 'Here is the place where stuff goes to disappear.', iconName: 'Trash2', defaultWidth: 620, defaultHeight: 440, onDesktop: true, pinnedInTaskbar: true },
+      { id: 'printer', title: 'Print Ink Waster', description: 'Wasting some ink...', iconName: 'Printer', defaultWidth: 560, defaultHeight: 460, onDesktop: true, pinnedInTaskbar: true },
+      { id: 'settings', title: 'Settings', description: 'Fix it yourself zone.', iconName: 'Settings', defaultWidth: 680, defaultHeight: 520, onDesktop: true, pinnedInTaskbar: true },
+      { id: 'browser', title: 'Useless Browser', description: 'The internet is currently hiding.', iconName: 'Compass', defaultWidth: 760, defaultHeight: 520, onDesktop: true, pinnedInTaskbar: true },
+      { id: 'calculator', title: 'Calculator', description: 'Calculation postponed indefinitely.', iconName: 'Calculator', defaultWidth: 380, defaultHeight: 520, onDesktop: true, pinnedInTaskbar: true },
+      { id: 'notepad', title: 'Notepad', description: 'Your thoughts have been saved nowhere.', iconName: 'FileEdit', defaultWidth: 600, defaultHeight: 460, onDesktop: true, pinnedInTaskbar: true },
+      { id: 'paint', title: 'Paint', description: 'Artistic ability not detected.', iconName: 'Palette', defaultWidth: 680, defaultHeight: 500, onDesktop: false },
+      { id: 'music', title: 'Music Player', description: 'Playing silence in ultra-HD.', iconName: 'Music', defaultWidth: 460, defaultHeight: 480, onDesktop: true },
+      { id: 'camera', title: 'Camera', description: 'Camera successfully detected absolutely nothing.', iconName: 'Camera', defaultWidth: 560, defaultHeight: 440, onDesktop: false },
+      { id: 'weather', title: 'Weather', description: 'Weather: probably something.', iconName: 'CloudSun', defaultWidth: 460, defaultHeight: 420, onDesktop: false },
+      { id: 'calendar', title: 'Calendar', description: 'Your schedule has been successfully ignored.', iconName: 'Calendar', defaultWidth: 500, defaultHeight: 460, onDesktop: false },
+      { id: 'task-manager', title: 'Task Manager', description: 'Viewing 0 productive tasks running.', iconName: 'Activity', defaultWidth: 620, defaultHeight: 480, onDesktop: true, pinnedInTaskbar: true },
+      { id: 'destroyer', title: 'Productivity Destroyer', description: 'Congratulations. Productivity destroyed.', iconName: 'Zap', defaultWidth: 460, defaultHeight: 380, onDesktop: true },
+      { id: 'malware', title: 'Definitely Not Malware', description: 'Totally legitimate background helper.', iconName: 'ShieldAlert', defaultWidth: 480, defaultHeight: 360, onDesktop: false },
+    ];
+
+    const CLICK_STREAK_MESSAGES = {
+      4: "Still clicking? How optimistic.",
+      6: "You really think this is going to work?",
+      8: "Respect the persistence.",
+      10: "Achievement unlocked: Professional Button Clicker.",
+      15: "You have now wasted 15 clicks of your life.",
+      25: "Legend says if you click 100 times, nothing still happens.",
+    };
+
+    const START_MENU_SPAM_MESSAGES = [
+      "Starting...",
+      "Still starting...",
+      "We may have overestimated the Start button.",
+      "Start button is having an existential crisis.",
+      "Cannot start: Start has not started.",
+    ];
+
+    // --- CONTEXT: TOAST SYSTEM ---
+    const ToastContext = createContext(null);
+    function ToastProvider({ children }) {
+      const [toasts, setToasts] = useState([]);
+
+      const removeToast = useCallback((id) => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+      }, []);
+
+      const addToast = useCallback((toast) => {
+        const id = 'toast_' + Math.random().toString(36).substring(2, 9);
+        const newToast = { ...toast, id };
+        setToasts((prev) => {
+          const trimmed = prev.length >= 5 ? prev.slice(prev.length - 4) : prev;
+          return [...trimmed, newToast];
+        });
+
+        if (toast.type === 'achievement') {
+          soundEngine.playFanfare();
+          try {
+            if (window.confetti) {
+              window.confetti({ particleCount: 50, spread: 60, origin: { y: 0.85, x: 0.85 } });
+            }
+          } catch(e) {}
+        } else if (toast.type === 'error') {
+          soundEngine.playError();
+        } else {
+          soundEngine.playNotification();
+        }
+
+        const dur = toast.duration ?? 4500;
+        if (dur > 0) {
+          setTimeout(() => removeToast(id), dur);
+        }
+        return id;
+      }, [removeToast]);
+
+      const showUselessMessage = useCallback((message, title = 'Useless Computer', type = 'warning') => {
+        addToast({ title, message, type });
+      }, [addToast]);
+
+      return (
+        <ToastContext.Provider value={{ toasts, addToast, removeToast, showUselessMessage }}>
+          {children}
+        </ToastContext.Provider>
+      );
+    }
+    const useToast = () => useContext(ToastContext);
+
+    // --- CONTEXT: SOUND SYSTEM ---
+    const SoundContext = createContext(null);
+    function SoundProvider({ children }) {
+      const [soundEnabled, setSoundEnabled] = useState(true);
+
+      const toggleSound = () => {
+        setSoundEnabled((prev) => {
+          const next = !prev;
+          soundEngine.enabled = next;
+          if (next) soundEngine.playClick();
+          return next;
+        });
+      };
+
+      return (
+        <SoundContext.Provider value={{ soundEnabled, toggleSound }}>
+          {children}
+        </SoundContext.Provider>
+      );
+    }
+    const useSound = () => useContext(SoundContext);
+
+    // --- CONTEXT: WINDOW MANAGER ---
+    const WindowContext = createContext(null);
+    function WindowProvider({ children }) {
+      const [windows, setWindows] = useState([]);
+      const [activeWindowId, setActiveWindowId] = useState(null);
+      const [bsodOpen, setBsodOpen] = useState(false);
+      const nextZRef = useRef(10);
+      const { showUselessMessage } = useToast();
+
+      const focusWindow = useCallback((id) => {
+        nextZRef.current += 1;
+        const newZ = nextZRef.current;
+        setActiveWindowId(id);
+        setWindows((prev) =>
+          prev.map((w) => (w.id === id ? { ...w, zIndex: newZ, isMinimized: false } : w))
+        );
+      }, []);
+
+      const openWindow = useCallback((appId) => {
+        soundEngine.playClick();
+        const appDef = FAKE_APPS.find((a) => a.id === appId);
+
+        if (appDef?.directAction === 'refuse-files' || appDef?.directAction === 'refuse-folder') {
+          soundEngine.playError();
+          showUselessMessage(REQUIRED_MESSAGES.FILE_ICON, appDef.title, 'warning');
+          return;
+        }
+
+        const existing = windows.find((w) => w.appId === appId);
+        if (existing) {
+          if (existing.isMinimized) {
+            setWindows((prev) =>
+              prev.map((w) => (w.id === existing.id ? { ...w, isMinimized: false } : w))
+            );
+          }
+          focusWindow(existing.id);
+          return;
+        }
+
+        const screenW = window.innerWidth || 1200;
+        const screenH = window.innerHeight || 800;
+        const appWidth = Math.min(appDef?.defaultWidth || 560, screenW - 40);
+        const appHeight = Math.min(appDef?.defaultHeight || 440, screenH - 120);
+        const offset = (windows.length % 6) * 28;
+        const initialX = Math.max(20, Math.floor((screenW - appWidth) / 2) + offset - 60);
+        const initialY = Math.max(20, Math.floor((screenH - appHeight - 60) / 2) + offset - 40);
+
+        nextZRef.current += 1;
+        const newZ = nextZRef.current;
+
+        const newWin = {
+          id: 'win_' + Math.random().toString(36).substring(2, 9),
+          appId,
+          title: appDef?.title || 'Application',
+          iconName: appDef?.iconName || 'Square',
+          isMinimized: false,
+          isMaximized: false,
+          position: { x: initialX, y: initialY },
+          size: { width: appWidth, height: appHeight },
+          zIndex: newZ,
+        };
+
+        setWindows((prev) => [...prev, newWin]);
+        setActiveWindowId(newWin.id);
+
+        if (appId === 'printer') {
+          showUselessMessage(REQUIRED_MESSAGES.PRINT, 'Printer Simulator', 'printer');
+        } else if (appId === 'settings') {
+          showUselessMessage(REQUIRED_MESSAGES.SETTINGS, 'Settings', 'info');
+        } else if (appId === 'recycle-bin') {
+          showUselessMessage(REQUIRED_MESSAGES.RECYCLE_BIN, 'Recycle Bin', 'warning');
+        }
+      }, [windows, focusWindow, showUselessMessage]);
+
+      const closeWindow = useCallback((id) => {
+        soundEngine.playClick();
+        setWindows((prev) => prev.filter((w) => w.id !== id));
+        setActiveWindowId((prev) => (prev === id ? null : prev));
+      }, []);
+
+      const minimizeWindow = useCallback((id) => {
+        soundEngine.playClick();
+        setWindows((prev) =>
+          prev.map((w) => (w.id === id ? { ...w, isMinimized: true } : w))
+        );
+        setActiveWindowId((prev) => (prev === id ? null : prev));
+      }, []);
+
+      const toggleMaximizeWindow = useCallback((id) => {
+        soundEngine.playClick();
+        setWindows((prev) =>
+          prev.map((w) => (w.id === id ? { ...w, isMaximized: !w.isMaximized } : w))
+        );
+      }, []);
+
+      const updatePosition = useCallback((id, position) => {
+        setWindows((prev) =>
+          prev.map((w) => (w.id === id ? { ...w, position } : w))
+        );
+      }, []);
+
+      const triggerBSOD = useCallback(() => {
+        soundEngine.playError();
+        setBsodOpen(true);
+      }, []);
+
+      const closeBSOD = useCallback(() => {
+        soundEngine.playClick();
+        setBsodOpen(false);
+      }, []);
+
+      return (
+        <WindowContext.Provider
+          value={{
+            windows,
+            activeWindowId,
+            openWindow,
+            closeWindow,
+            minimizeWindow,
+            toggleMaximizeWindow,
+            focusWindow,
+            updatePosition,
+            bsodOpen,
+            triggerBSOD,
+            closeBSOD,
+          }}
+        >
+          {children}
+        </WindowContext.Provider>
+      );
+    }
+    const useWindowManager = () => useContext(WindowContext);
+
+    // --- HOOK: CLICK STREAK TRACKER ---
+    function useClickTracker() {
+      const { showUselessMessage, addToast } = useToast();
+      const clickCountMap = useRef(new Map());
+      const startClickCount = useRef(0);
+
+      const registerClick = useCallback((targetId, customMsg) => {
+        const now = Date.now();
+        const current = clickCountMap.current.get(targetId) || { count: 0, lastTime: 0 };
+        const count = now - current.lastTime < 3500 ? current.count + 1 : 1;
+        clickCountMap.current.set(targetId, { count, lastTime: now });
+
+        if (CLICK_STREAK_MESSAGES[count]) {
+          const isAch = count === 10;
+          addToast({
+            title: isAch ? 'Achievement Unlocked!' : 'Persistence Detected',
+            message: CLICK_STREAK_MESSAGES[count],
+            type: isAch ? 'achievement' : 'warning',
+            duration: 5000,
+          });
+          return;
+        }
+        if (customMsg) showUselessMessage(customMsg);
+      }, [showUselessMessage, addToast]);
+
+      const registerStartClick = useCallback(() => {
+        startClickCount.current += 1;
+        const count = startClickCount.current;
+        if (count >= 2 && count <= 5) {
+          const msg = START_MENU_SPAM_MESSAGES[Math.min(count - 2, START_MENU_SPAM_MESSAGES.length - 1)];
+          showUselessMessage(msg, 'Start Menu', 'warning');
+        }
+      }, [showUselessMessage]);
+
+      return { registerClick, registerStartClick };
+    }
+
+    // --- FAKE APPLICATION COMPONENTS ---
+
+    // 1. Printer Simulator
+    function PrinterSimulator() {
+      const [printing, setPrinting] = useState(false);
+      const [progress, setProgress] = useState(0);
+      const [statusText, setStatusText] = useState('Printer Ready (Low on imaginary ink)');
+      const [paperCount, setPaperCount] = useState(0);
+      const { showUselessMessage, addToast } = useToast();
+
+      useEffect(() => {
+        let interval;
+        if (printing) {
+          interval = setInterval(() => {
+            setProgress((prev) => {
+              soundEngine.playPrinterStep();
+              if (prev < 30) {
+                setStatusText('Preparing printer...');
+                return prev + 5;
+              } else if (prev < 65) {
+                setStatusText('Wasting ink...');
+                return prev + 6;
+              } else if (prev < 95) {
+                setStatusText('Printing absolutely nothing...');
+                return prev + 4;
+              } else if (prev >= 95 && prev < 100) {
+                return 100;
+              } else {
+                clearInterval(interval);
+                setPrinting(false);
+                setStatusText('Done. Congratulations. You printed nothing.');
+                setPaperCount((c) => c + 1);
+                soundEngine.playFanfare();
+                addToast({
+                  title: 'Print Complete',
+                  message: REQUIRED_MESSAGES.PRINT_DONE,
+                  type: 'printer',
+                  duration: 5000,
+                });
+                return 100;
+              }
+            });
+          }, 250);
+        }
+        return () => clearInterval(interval);
+      }, [printing, addToast]);
+
+      const startPrint = () => {
+        if (printing) return;
+        showUselessMessage(REQUIRED_MESSAGES.PRINT, 'Printer', 'printer');
+        setProgress(0);
+        setPrinting(true);
+      };
+
+      const cancelPrint = () => {
+        if (!printing) {
+          showUselessMessage('There is nothing to cancel, yet you tried anyway.', 'Printer', 'warning');
+          return;
+        }
+        showUselessMessage('Cancelling cancelled: Printer insisted on continuing to waste ink.', 'Printer', 'error');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/90 text-slate-100 p-6 select-none overflow-y-auto">
+          <div className="flex items-center gap-4 pb-5 border-b border-slate-700/60">
+            <div className="p-3 bg-sky-500/10 border border-sky-500/30 rounded-xl text-sky-400">
+              <DynamicIcon name="Printer" className="w-8 h-8 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-100">LaserJet Useless 9000 Pro</h2>
+              <p className="text-xs text-slate-400">Status: {statusText}</p>
+            </div>
+            <div className="ml-auto text-right">
+              <span className="text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Online-ish
+              </span>
+              <p className="text-xs text-slate-500 mt-1">Sheets wasted: {paperCount}</p>
+            </div>
+          </div>
+
+          <div className="my-6 p-5 rounded-xl bg-slate-800/60 border border-slate-700/60 flex flex-col gap-4">
+            <div className="flex justify-between items-center text-sm font-semibold">
+              <span className="text-slate-300">{statusText}</span>
+              <span className="text-sky-400 font-mono">{progress}%</span>
+            </div>
+            <div className="w-full h-4 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-700/80">
+              <div
+                className="h-full bg-gradient-to-r from-sky-500 via-indigo-500 to-cyan-400 rounded-full transition-all duration-200"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+
+            <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-lg font-mono text-xs text-slate-400 space-y-1">
+              <div>$ spoolsv.exe --waste-cartridge --level=maximum</div>
+              {progress >= 30 && <div className="text-sky-400">████░░░░░░ 40% Preparing printer...</div>}
+              {progress >= 65 && <div className="text-amber-400">███████░░░ 70% Wasting ink...</div>}
+              {progress >= 100 && (
+                <div className="text-emerald-400 font-bold">
+                  ██████████ 100% Congratulations. You printed nothing.
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/40 text-xs">
+              <span className="text-slate-400">Ink Level:</span>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded-full bg-cyan-400 inline-block" title="Cyan: 0%"></span>
+                <span className="w-3 h-3 rounded-full bg-pink-500 inline-block" title="Magenta: 0%"></span>
+                <span className="w-3 h-3 rounded-full bg-yellow-400 inline-block" title="Yellow: 0%"></span>
+                <span className="w-3 h-3 rounded-full bg-black inline-block border border-slate-600" title="Black: 0%"></span>
+                <span className="text-rose-400 ml-1 font-semibold">0% remaining</span>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-slate-800/40 border border-slate-700/40 text-xs">
+              <span className="text-slate-400">Print Quality:</span>
+              <p className="mt-1 font-semibold text-slate-200">Ultra-High Def Void (1200 DPI)</p>
+            </div>
+          </div>
+
+          <div className="mt-auto flex items-center gap-3">
+            <button
+              onClick={startPrint}
+              disabled={printing}
+              className="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 text-white font-semibold text-sm shadow-lg shadow-sky-500/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              <DynamicIcon name="FileText" className="w-4 h-4" />
+              {printing ? 'Printing Nothing...' : 'Print Nothing Now'}
+            </button>
+            <button
+              onClick={cancelPrint}
+              className="py-3 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 font-semibold text-sm border border-slate-700 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 2. Settings App
+    function SettingsApp() {
+      const [brightness, setBrightness] = useState(75);
+      const [volume, setVolume] = useState(0);
+      const [performanceMode, setPerformanceMode] = useState('Slower');
+      const [checkingUpdate, setCheckingUpdate] = useState(false);
+      const { showUselessMessage } = useToast();
+
+      const handleBrightnessChange = (e) => {
+        soundEngine.playClick();
+        const val = Number(e.target.value);
+        setBrightness(val);
+        showUselessMessage(`Brightness adjusted to ${val}%. The screen looks exactly the same.`, 'Display Settings', 'info');
+      };
+
+      const handleVolumeChange = (e) => {
+        soundEngine.playClick();
+        const val = Number(e.target.value);
+        setVolume(val);
+        showUselessMessage(`Volume level changed to ${val}%. Silence has never sounded louder.`, 'Audio Settings', 'info');
+      };
+
+      const handleWifiToggle = () => {
+        soundEngine.playError();
+        showUselessMessage('Wi-Fi Status: Permanently "Almost connected".', 'Network Settings', 'warning');
+      };
+
+      const handleThemeChange = () => {
+        soundEngine.playClick();
+        showUselessMessage('Theme option: "Coming eventually". Enjoy the existential void.', 'Personalization', 'warning');
+      };
+
+      const handlePerformanceChange = (mode) => {
+        soundEngine.playClick();
+        setPerformanceMode(mode);
+        showUselessMessage('Performance setting updated: "Please lower your expectations".', 'Performance', 'warning');
+      };
+
+      const handleCheckUpdates = () => {
+        if (checkingUpdate) return;
+        soundEngine.playClick();
+        setCheckingUpdate(true);
+        setTimeout(() => {
+          setCheckingUpdate(false);
+          showUselessMessage('Your computer is already confused enough. No updates installed.', 'System Updates', 'warning');
+        }, 1800);
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-6 select-none overflow-y-auto">
+          <div className="flex items-center gap-3.5 pb-4 border-b border-slate-800">
+            <div className="p-2.5 bg-slate-800 rounded-xl text-sky-400">
+              <DynamicIcon name="Settings" className="w-6 h-6 animate-spin-slow" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-100">System Preferences</h2>
+              <p className="text-xs text-amber-400 font-semibold">{REQUIRED_MESSAGES.SETTINGS}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-5">
+            <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 flex flex-col justify-between">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-semibold">Display Brightness</span>
+                <span className="ml-auto text-xs font-mono text-slate-400">{brightness}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={brightness}
+                onChange={handleBrightnessChange}
+                className="w-full accent-amber-400 cursor-pointer"
+              />
+              <p className="text-[11px] text-slate-400 mt-2">Adjusting this changes literally nothing.</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 flex flex-col justify-between">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-semibold">Master Audio</span>
+                <span className="ml-auto text-xs font-mono text-slate-400">{volume}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={volume}
+                onChange={handleVolumeChange}
+                className="w-full accent-sky-400 cursor-pointer"
+              />
+              <p className="text-[11px] text-slate-400 mt-2">Maximum silence guaranteed at any volume.</p>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 flex items-center justify-between">
+              <div>
+                <span className="text-sm font-semibold">Wireless Networking</span>
+                <p className="text-xs text-amber-400 mt-1">Status: Almost connected</p>
+              </div>
+              <button
+                onClick={handleWifiToggle}
+                className="px-3 py-1.5 rounded-lg bg-slate-700/80 hover:bg-slate-700 text-xs font-medium text-slate-200 border border-slate-600 transition-colors"
+              >
+                Reconnect
+              </button>
+            </div>
+
+            <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 flex items-center justify-between">
+              <div>
+                <span className="text-sm font-semibold">System Theme</span>
+                <p className="text-xs text-slate-400 mt-1">Status: Coming eventually</p>
+              </div>
+              <button
+                onClick={handleThemeChange}
+                className="px-3 py-1.5 rounded-lg bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 text-xs font-medium border border-purple-500/30 transition-colors"
+              >
+                Select
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-semibold">Performance Mode</span>
+              <span className="ml-auto text-xs text-emerald-400 font-mono">{performanceMode}</span>
+            </div>
+            <p className="text-xs text-slate-400 mb-3">Please lower your expectations:</p>
+            <div className="grid grid-cols-3 gap-2">
+              {['Slow', 'Slower', 'Hibernating'].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => handlePerformanceChange(mode)}
+                  className={`py-2 px-3 rounded-lg text-xs font-medium transition-all ${
+                    performanceMode === mode
+                      ? 'bg-sky-500 text-white shadow-md'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 p-4 rounded-xl bg-slate-800/40 border border-slate-700/50 flex items-center justify-between">
+            <div>
+              <span className="text-sm font-semibold">Useless OS Updates</span>
+              <p className="text-xs text-slate-400 mt-1">Your computer is already confused enough.</p>
+            </div>
+            <button
+              onClick={handleCheckUpdates}
+              disabled={checkingUpdate}
+              className="py-2 px-3.5 rounded-lg bg-sky-500 hover:bg-sky-400 active:scale-95 text-xs font-semibold text-white transition-all disabled:opacity-50"
+            >
+              {checkingUpdate ? 'Confusing...' : 'Check Now'}
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 3. Recycle Bin App
+    function RecycleBinApp() {
+      const items = [
+        { id: '1', name: 'Motivation.dll', originalPath: 'C:\\Life\\MentalState', size: '0 KB', deletedTime: 'Just now' },
+        { id: '2', name: 'Productivity.docx', originalPath: 'C:\\Users\\Work', size: '0 KB', deletedTime: '9:00 AM' },
+        { id: '3', name: 'That important document.pdf', originalPath: 'C:\\Desktop\\NeverSaved', size: '999 GB', deletedTime: 'Yesterday' },
+        { id: '4', name: 'Free time.zip', originalPath: 'C:\\Calendar\\Weekends', size: '1 byte', deletedTime: '2020' },
+        { id: '5', name: 'Common sense.exe', originalPath: 'C:\\System32\\Logic', size: 'Unknown', deletedTime: 'Long ago' },
+      ];
+      const [selectedId, setSelectedId] = useState(null);
+      const { showUselessMessage } = useToast();
+
+      const handleEmpty = () => {
+        soundEngine.playError();
+        showUselessMessage('Items refuse to leave: they feel safer in the trash.', 'Recycle Bin', 'warning');
+      };
+
+      const handleRestore = () => {
+        soundEngine.playError();
+        showUselessMessage('Restore failed: You cannot resurrect what was never truly there.', 'Recycle Bin', 'error');
+      };
+
+      const handleItemClick = (item) => {
+        soundEngine.playClick();
+        setSelectedId(item.id);
+        showUselessMessage(`"${item.name}" was discarded for a reason. Please let it rest.`, 'Item Locked', 'info');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-5 select-none overflow-hidden">
+          <div className="flex items-center justify-between pb-3.5 border-b border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400">
+                <DynamicIcon name="Trash2" className="w-5 h-5" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-100">Recycle Bin</h2>
+                <p className="text-xs text-amber-400 font-medium">{REQUIRED_MESSAGES.RECYCLE_BIN}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleRestore}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300 border border-slate-700 transition-colors"
+              >
+                <DynamicIcon name="RotateCcw" className="w-3.5 h-3.5 text-sky-400" />
+                Restore All
+              </button>
+              <button
+                onClick={handleEmpty}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-colors"
+              >
+                <DynamicIcon name="Trash2" className="w-3.5 h-3.5" />
+                Empty Recycle Bin
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto mt-3">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-800 text-slate-400">
+                  <th className="pb-2 font-medium">Name</th>
+                  <th className="pb-2 font-medium">Original Location</th>
+                  <th className="pb-2 font-medium">Date Deleted</th>
+                  <th className="pb-2 font-medium text-right">Size</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60">
+                {items.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => handleItemClick(item)}
+                    className={`cursor-pointer transition-colors ${
+                      selectedId === item.id ? 'bg-sky-500/20 text-sky-200' : 'hover:bg-slate-800/40 text-slate-300'
+                    }`}
+                  >
+                    <td className="py-2.5 flex items-center gap-2 font-medium">
+                      <DynamicIcon name="FileText" className="w-4 h-4 text-slate-400" />
+                      {item.name}
+                    </td>
+                    <td className="py-2.5 text-slate-400">{item.originalPath}</td>
+                    <td className="py-2.5 text-slate-400">{item.deletedTime}</td>
+                    <td className="py-2.5 text-right font-mono text-slate-400">{item.size}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pt-3 border-t border-slate-800 text-xs text-slate-500 flex justify-between">
+            <span>{items.length} items occupying emotional storage</span>
+            <span>Space recovered: 0.00 bytes</span>
+          </div>
+        </div>
+      );
+    }
+
+    // 4. Calculator App
+    function CalculatorApp() {
+      const [display, setDisplay] = useState('0');
+      const { showUselessMessage } = useToast();
+
+      const funnyMath = [
+        "2 + 2 = Please don't ask difficult questions.",
+        "Calculation postponed indefinitely.",
+        "Result: 42 (Unverified)",
+        "Error: Math is an illusion.",
+        "Result: NaN (Not a Number, Not your business)",
+        "Calculator is taking a mental health day.",
+      ];
+
+      const handleDigit = (d) => {
+        soundEngine.playClick();
+        setDisplay((prev) => (prev === '0' || prev.length > 14 ? d : prev + d));
+      };
+
+      const handleClear = () => {
+        soundEngine.playClick();
+        setDisplay('0');
+        showUselessMessage('Display wiped clean. Ignorance is bliss.', 'Calculator', 'info');
+      };
+
+      const handleEquals = () => {
+        soundEngine.playError();
+        const rand = funnyMath[Math.floor(Math.random() * funnyMath.length)];
+        setDisplay('???');
+        showUselessMessage(rand, 'Math Refusal', 'warning');
+      };
+
+      const handleOp = (op) => {
+        soundEngine.playClick();
+        setDisplay((prev) => prev + ' ' + op + ' ');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-4 select-none">
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-right mb-4">
+            <div className="text-xs text-slate-500 font-mono">Useless Calc v0.0</div>
+            <div className="text-3xl font-mono font-bold text-sky-400 truncate mt-1">{display}</div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 flex-1">
+            {['C', '(', ')', '/'].map((item) => (
+              <button
+                key={item}
+                onClick={() => (item === 'C' ? handleClear() : handleOp(item))}
+                className="rounded-xl bg-slate-800/80 hover:bg-slate-700/80 active:scale-95 font-semibold text-sm text-sky-300 border border-slate-700 transition-all flex items-center justify-center"
+              >
+                {item}
+              </button>
+            ))}
+            {['7', '8', '9', '*'].map((item) => (
+              <button
+                key={item}
+                onClick={() => (item === '*' ? handleOp(item) : handleDigit(item))}
+                className="rounded-xl bg-slate-800/50 hover:bg-slate-700 active:scale-95 font-semibold text-base text-slate-200 border border-slate-700/60 transition-all flex items-center justify-center"
+              >
+                {item}
+              </button>
+            ))}
+            {['4', '5', '6', '-'].map((item) => (
+              <button
+                key={item}
+                onClick={() => (item === '-' ? handleOp(item) : handleDigit(item))}
+                className="rounded-xl bg-slate-800/50 hover:bg-slate-700 active:scale-95 font-semibold text-base text-slate-200 border border-slate-700/60 transition-all flex items-center justify-center"
+              >
+                {item}
+              </button>
+            ))}
+            {['1', '2', '3', '+'].map((item) => (
+              <button
+                key={item}
+                onClick={() => (item === '+' ? handleOp(item) : handleDigit(item))}
+                className="rounded-xl bg-slate-800/50 hover:bg-slate-700 active:scale-95 font-semibold text-base text-slate-200 border border-slate-700/60 transition-all flex items-center justify-center"
+              >
+                {item}
+              </button>
+            ))}
+            <button
+              onClick={() => handleDigit('0')}
+              className="col-span-2 rounded-xl bg-slate-800/50 hover:bg-slate-700 active:scale-95 font-semibold text-base text-slate-200 border border-slate-700/60 transition-all flex items-center justify-center"
+            >
+              0
+            </button>
+            <button
+              onClick={() => handleDigit('.')}
+              className="rounded-xl bg-slate-800/50 hover:bg-slate-700 active:scale-95 font-semibold text-base text-slate-200 border border-slate-700/60 transition-all flex items-center justify-center"
+            >
+              .
+            </button>
+            <button
+              onClick={handleEquals}
+              className="rounded-xl bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 active:scale-95 font-bold text-lg text-white shadow-lg shadow-sky-500/20 transition-all flex items-center justify-center"
+            >
+              =
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 5. Notepad App
+    function NotepadApp() {
+      const [text, setText] = useState('Type your brilliant, world-changing ideas here...');
+      const { showUselessMessage } = useToast();
+
+      const handleSave = () => {
+        soundEngine.playError();
+        showUselessMessage('Your note has been successfully forgotten.', 'Notepad', 'warning');
+      };
+
+      const handleClear = () => {
+        soundEngine.playClick();
+        setText('');
+        showUselessMessage('Your thoughts have been saved nowhere.', 'Notepad', 'info');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 select-none overflow-hidden font-sans">
+          <div className="flex items-center gap-4 px-4 py-1.5 bg-slate-950/60 border-b border-slate-800 text-xs text-slate-300">
+            <span>File</span>
+            <span>Edit</span>
+            <span>Format</span>
+            <span>Help</span>
+
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={handleSave}
+                className="px-2.5 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs transition-colors"
+              >
+                Save (Forget)
+              </button>
+              <button
+                onClick={handleClear}
+                className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="flex-1 w-full p-4 bg-slate-900/50 text-slate-200 resize-none font-mono text-sm leading-relaxed border-none outline-none placeholder:text-slate-600"
+          />
+
+          <div className="px-4 py-1.5 bg-slate-950/80 border-t border-slate-800 flex justify-between text-[11px] text-slate-500 font-mono">
+            <span>Characters: {text.length} | Lines: {text.split('\n').length}</span>
+            <span className="text-amber-500">Auto-saved to: /dev/null</span>
+          </div>
+        </div>
+      );
+    }
+
+    // 6. Browser App
+    function BrowserApp() {
+      const [url, setUrl] = useState('https://google.com');
+      const [loading, setLoading] = useState(false);
+      const { showUselessMessage } = useToast();
+
+      const handleNavigate = (e) => {
+        e.preventDefault();
+        soundEngine.playClick();
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+          soundEngine.playError();
+          showUselessMessage('The internet is currently unavailable because we forgot where it is.', 'Useless Browser', 'error');
+        }, 1200);
+      };
+
+      const handleRefresh = () => {
+        soundEngine.playClick();
+        setLoading(true);
+        setTimeout(() => {
+          setLoading(false);
+          showUselessMessage('The internet is currently hiding.', 'Useless Browser', 'warning');
+        }, 1000);
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 select-none overflow-hidden font-sans">
+          <div className="flex items-center gap-2 px-3 py-2 bg-slate-950/70 border-b border-slate-800">
+            <button
+              onClick={() => showUselessMessage('Back button: Past regrets cannot be undone.', 'Browser', 'info')}
+              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs"
+            >
+              ←
+            </button>
+            <button
+              onClick={() => showUselessMessage('Forward button: The future holds no web pages.', 'Browser', 'info')}
+              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs"
+            >
+              →
+            </button>
+            <button
+              onClick={handleRefresh}
+              className={`p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs ${loading ? 'animate-spin text-sky-400' : ''}`}
+            >
+              ⟳
+            </button>
+
+            <form onSubmit={handleNavigate} className="flex-1">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-xs">
+                <input
+                  type="text"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="flex-1 bg-transparent border-none outline-none text-slate-200 font-mono text-xs"
+                />
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 font-medium">
+                  Disconnected
+                </span>
+              </div>
+            </form>
+          </div>
+
+          <div className="flex-1 p-8 flex flex-col items-center justify-center text-center overflow-auto bg-slate-950/40">
+            <div className="max-w-md p-6 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col items-center">
+              <div className="p-4 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 mb-4">
+                <DynamicIcon name="Wifi" className="w-10 h-10" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-100 mb-1">The internet is currently hiding.</h3>
+              <p className="text-xs text-slate-400 mb-4 leading-relaxed">
+                The internet is currently unavailable because we forgot where it is. We checked between the couch cushions and behind the router.
+              </p>
+              <div className="w-full p-3 rounded-lg bg-slate-950/60 border border-slate-800 font-mono text-xs text-amber-400 mb-5 text-left">
+                <div>ERR_INTERNET_DISAPPEARED</div>
+                <div className="text-slate-500 mt-1">Host: {url}</div>
+              </div>
+              <button
+                onClick={handleRefresh}
+                className="w-full py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 active:scale-95 text-white font-semibold text-xs shadow-lg shadow-sky-500/20 transition-all"
+              >
+                Look for Internet Again
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 7. Paint App
+    function PaintApp() {
+      const canvasRef = useRef(null);
+      const [isDrawing, setIsDrawing] = useState(false);
+      const [color, setColor] = useState('#38bdf8');
+      const [strokeCount, setStrokeCount] = useState(0);
+      const { showUselessMessage } = useToast();
+
+      useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }, []);
+
+      const startDrawing = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const rect = canvas.getBoundingClientRect();
+        ctx.beginPath();
+        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+        setIsDrawing(true);
+      };
+
+      const draw = (e) => {
+        if (!isDrawing) return;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const rect = canvas.getBoundingClientRect();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.stroke();
+      };
+
+      const stopDrawing = () => {
+        if (isDrawing) {
+          setIsDrawing(false);
+          setStrokeCount((prev) => {
+            const next = prev + 1;
+            if (next % 4 === 0) {
+              soundEngine.playError();
+              showUselessMessage('Artistic ability not detected.', 'Useless Paint', 'warning');
+            }
+            return next;
+          });
+        }
+      };
+
+      const clearCanvas = () => {
+        soundEngine.playClick();
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.fillStyle = '#090d16';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        showUselessMessage('Canvas wiped. It was probably for the best.', 'Paint', 'info');
+      };
+
+      const saveArt = () => {
+        soundEngine.playError();
+        showUselessMessage('Artistic ability not detected. Masterpiece denied.', 'Paint', 'error');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 select-none overflow-hidden font-sans">
+          <div className="flex items-center gap-3 px-4 py-2 bg-slate-950/70 border-b border-slate-800">
+            <span className="text-xs font-bold text-slate-200">Useless Paint</span>
+            <div className="flex items-center gap-1.5 ml-2">
+              {['#38bdf8', '#f43f5e', '#10b981', '#fbbf24', '#a855f7', '#f8fafc'].map((c) => (
+                <button
+                  key={c}
+                  onClick={() => { setColor(c); soundEngine.playClick(); }}
+                  style={{ backgroundColor: c }}
+                  className={`w-5 h-5 rounded-full border transition-transform ${color === c ? 'scale-125 border-white' : 'border-transparent'}`}
+                />
+              ))}
+            </div>
+            <div className="ml-auto flex items-center gap-2">
+              <button onClick={clearCanvas} className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-300">
+                Clear
+              </button>
+              <button onClick={saveArt} className="px-2.5 py-1 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 text-xs font-medium">
+                Save
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 bg-slate-950 flex items-center justify-center p-3">
+            <canvas
+              ref={canvasRef}
+              width={620}
+              height={400}
+              onMouseDown={startDrawing}
+              onMouseMove={draw}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
+              className="rounded-xl border border-slate-800 cursor-crosshair"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // 8. Music Player App
+    function MusicPlayerApp() {
+      const [isPlaying, setIsPlaying] = useState(true);
+      const [progress, setProgress] = useState(35);
+      const { showUselessMessage } = useToast();
+
+      useEffect(() => {
+        let interval;
+        if (isPlaying) {
+          interval = setInterval(() => {
+            setProgress((prev) => (prev >= 100 ? 0 : prev + 1));
+          }, 400);
+        }
+        return () => clearInterval(interval);
+      }, [isPlaying]);
+
+      const togglePlay = () => {
+        soundEngine.playClick();
+        setIsPlaying(!isPlaying);
+        showUselessMessage('Playing silence in ultra-HD.', 'Music Player', 'info');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-6 select-none justify-between overflow-hidden">
+          <div className="flex flex-col items-center justify-center my-auto">
+            <div className="relative w-36 h-36 rounded-full bg-slate-950 border-4 border-slate-800 flex items-center justify-center shadow-2xl">
+              <div className={`w-12 h-12 rounded-full bg-sky-500/20 border border-sky-400/40 flex items-center justify-center ${isPlaying ? 'animate-pulse' : ''}`}>
+                <DynamicIcon name="Music" className="w-5 h-5 text-sky-400" />
+              </div>
+            </div>
+            <div className="text-center mt-5">
+              <h3 className="text-base font-bold text-slate-100">Absolute Silence (Remastered)</h3>
+              <p className="text-xs text-sky-400 mt-0.5">Playing silence in ultra-HD.</p>
+              <span className="text-[10px] text-slate-500 font-mono">FLAC 24-bit / 192kHz • 0 bps</span>
+            </div>
+
+            <div className="flex items-end gap-1.5 h-10 mt-5">
+              {[40, 75, 20, 90, 60, 30, 85, 45, 95, 30, 65, 50].map((h, idx) => (
+                <div
+                  key={idx}
+                  className="w-1.5 bg-gradient-to-t from-sky-500 to-indigo-500 rounded-full transition-all duration-300"
+                  style={{
+                    height: isPlaying ? `${Math.max(10, (h * ((progress + idx * 7) % 100)) / 100)}%` : '15%',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-slate-800/80">
+            <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden mb-3 border border-slate-800">
+              <div className="bg-sky-500 h-full rounded-full" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="flex items-center justify-center gap-5">
+              <button
+                onClick={togglePlay}
+                className="w-12 h-12 rounded-full bg-sky-500 hover:bg-sky-400 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-sky-500/30 transition-all font-bold"
+              >
+                {isPlaying ? '⏸' : '▶'}
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // 9. Camera App
+    function CameraApp() {
+      const [flash, setFlash] = useState(false);
+      const { showUselessMessage } = useToast();
+
+      const takeSnapshot = () => {
+        soundEngine.playClick();
+        setFlash(true);
+        setTimeout(() => {
+          setFlash(false);
+          soundEngine.playError();
+          showUselessMessage('Camera successfully detected absolutely nothing.', 'Webcam 4K', 'warning');
+        }, 500);
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-950 text-slate-100 select-none overflow-hidden font-sans p-4">
+          <div className="relative flex-1 rounded-2xl bg-slate-900 border border-slate-800 overflow-hidden flex items-center justify-center">
+            <div className="absolute inset-0 scanlines pointer-events-none" />
+            <div className="absolute top-1/4 left-1/3 w-28 h-28 border-2 border-emerald-400/70 rounded-lg animate-pulse pointer-events-none flex flex-col justify-between p-1">
+              <span className="text-[9px] font-mono text-emerald-400">NO HUMAN FOUND</span>
+              <span className="text-[9px] font-mono text-emerald-400 self-end">0.0% MATCH</span>
+            </div>
+            {flash && <div className="absolute inset-0 bg-white animate-fade-in z-20" />}
+            <div className="flex flex-col items-center gap-2 text-slate-600">
+              <DynamicIcon name="Camera" className="w-12 h-12" />
+              <p className="text-xs font-mono text-slate-500">Useless HD Webcam • 1080p 0fps</p>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-center">
+            <button
+              onClick={takeSnapshot}
+              className="w-14 h-14 rounded-full bg-rose-500 hover:bg-rose-400 active:scale-90 text-white flex items-center justify-center shadow-lg shadow-rose-500/30 transition-all border-4 border-slate-900"
+            >
+              <DynamicIcon name="Camera" className="w-6 h-6" />
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // 10. Weather App
+    function WeatherApp() {
+      const { showUselessMessage } = useToast();
+      const refreshWeather = () => {
+        soundEngine.playClick();
+        showUselessMessage('Weather: probably something.', 'Weather Forecast', 'info');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-6 select-none overflow-y-auto font-sans justify-between">
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-sky-500/20 via-indigo-500/10 to-transparent border border-sky-500/20">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-slate-100">Somewhere on Earth</h2>
+                <p className="text-xs text-sky-400 font-semibold mt-0.5">Weather: probably something.</p>
+              </div>
+              <DynamicIcon name="CloudSun" className="w-12 h-12 text-amber-400 animate-pulse" />
+            </div>
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className="text-4xl font-extrabold text-slate-100">Room Temp</span>
+              <span className="text-xs text-slate-400">(21°C / 70°F-ish)</span>
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {[
+              { day: 'Today', cond: 'Atmospheric conditions', temp: 'Present' },
+              { day: 'Tomorrow', cond: 'Tomorrow will occur', temp: 'Pending' },
+              { day: 'Wednesday', cond: 'Sky exists', temp: 'Likely' },
+              { day: 'Thursday', cond: 'Probably rain or not', temp: '50/50' },
+            ].map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/40 border border-slate-800 text-xs">
+                <span className="font-semibold text-slate-200 w-24">{item.day}</span>
+                <span className="text-slate-400 flex-1">{item.cond}</span>
+                <span className="font-mono text-sky-400">{item.temp}</span>
+              </div>
+            ))}
+          </div>
+
+          <button
+            onClick={refreshWeather}
+            className="mt-4 w-full py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-colors"
+          >
+            Predict Today Again
+          </button>
+        </div>
+      );
+    }
+
+    // 11. Calendar App
+    function CalendarApp() {
+      const { showUselessMessage } = useToast();
+      const handleAddEvent = () => {
+        soundEngine.playError();
+        showUselessMessage('Your schedule has been successfully ignored.', 'Calendar', 'warning');
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-5 select-none overflow-hidden font-sans">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h2 className="text-sm font-bold text-slate-100">Procrastination Planner</h2>
+            <button
+              onClick={handleAddEvent}
+              className="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-xs font-semibold text-white transition-colors"
+            >
+              + Add Event
+            </button>
+          </div>
+
+          <div className="p-3 my-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300">
+            <strong>Status:</strong> Your schedule has been successfully ignored.
+          </div>
+
+          <div className="grid grid-cols-7 gap-1 flex-1 text-center text-xs">
+            {Array.from({ length: 31 }).map((_, i) => (
+              <div
+                key={i}
+                onClick={() => { soundEngine.playClick(); showUselessMessage(`Day ${i + 1}: Postponed.`, 'Calendar', 'info'); }}
+                className={`p-2 rounded-xl flex items-center justify-center border cursor-pointer ${
+                  i === 10 ? 'bg-sky-500/30 border-sky-400 text-sky-200 font-bold' : 'bg-slate-800/30 border-slate-800/60 text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                {i + 1}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // 12. Task Manager App
+    function TaskManagerApp() {
+      const [processes, setProcesses] = useState([
+        { id: '1', name: 'Uselessness.exe', cpu: 97, memory: '4,096 MB', status: 'Crucial' },
+        { id: '2', name: 'Productivity.exe', cpu: 0, memory: '0 MB', status: 'Comatose' },
+        { id: '3', name: 'Thinking.exe', cpu: 12, memory: '128 MB', status: 'Confused' },
+        { id: '4', name: 'DoingStuff.exe', cpu: 0, memory: '0 MB', status: 'Not Found' },
+        { id: '5', name: 'BackgroundNonsense.exe', cpu: 84, memory: '2,048 MB', status: 'Thriving' },
+      ]);
+      const [selectedId, setSelectedId] = useState('1');
+      const { showUselessMessage } = useToast();
+
+      const handleEndTask = () => {
+        soundEngine.playError();
+        const sel = processes.find((p) => p.id === selectedId);
+        showUselessMessage(
+          `Task Manager refuses to end ${sel?.name || 'task'} - it is critical to system uselessness.`,
+          'Task Manager Refusal',
+          'error'
+        );
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-5 select-none overflow-hidden font-sans">
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h2 className="text-sm font-bold text-slate-100">Task Manager</h2>
+            <button
+              onClick={handleEndTask}
+              className="px-3 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-xs font-semibold text-rose-300 border border-rose-500/30 transition-colors"
+            >
+              End Task
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 my-3">
+            <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-800">
+              <span className="text-[11px] text-slate-400">Total Uselessness</span>
+              <div className="text-xl font-bold font-mono text-amber-400">99.9%</div>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-800/40 border border-slate-800">
+              <span className="text-[11px] text-slate-400">Productivity Rate</span>
+              <div className="text-xl font-bold font-mono text-rose-400">0.0%</div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-auto border border-slate-800 rounded-xl">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="sticky top-0 bg-slate-950 text-slate-400">
+                <tr className="border-b border-slate-800">
+                  <th className="p-2.5">Process Name</th>
+                  <th className="p-2.5 text-right">CPU</th>
+                  <th className="p-2.5 text-right">Memory</th>
+                  <th className="p-2.5">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/50">
+                {processes.map((p) => (
+                  <tr
+                    key={p.id}
+                    onClick={() => { soundEngine.playClick(); setSelectedId(p.id); }}
+                    className={`cursor-pointer ${selectedId === p.id ? 'bg-sky-500/20 text-sky-200' : 'hover:bg-slate-800/50 text-slate-300'}`}
+                  >
+                    <td className="p-2.5 font-mono">{p.name}</td>
+                    <td className="p-2.5 text-right font-mono text-amber-400">{p.cpu}%</td>
+                    <td className="p-2.5 text-right font-mono text-slate-400">{p.memory}</td>
+                    <td className="p-2.5 text-slate-400">{p.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="pt-2.5 text-[11px] text-slate-500 flex justify-between">
+            <span>7 useless tasks running...</span>
+            <span>0 productive tasks running.</span>
+          </div>
+        </div>
+      );
+    }
+
+    // 13. Productivity Destroyer & Malware
+    function ProductivityDestroyerApp() {
+      const [hours, setHours] = useState(1);
+      const { showUselessMessage } = useToast();
+
+      const handleDestroy = () => {
+        soundEngine.playFanfare();
+        setHours((h) => h + 1);
+        showUselessMessage('Congratulations. Productivity destroyed.', 'Productivity Destroyer', 'achievement');
+      };
+
+      return (
+        <div className="flex flex-col items-center justify-center h-full bg-slate-900/95 text-slate-100 p-6 select-none text-center">
+          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-400 mb-4 animate-pulse">
+            <DynamicIcon name="Zap" className="w-12 h-12" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-100">Productivity Annihilator 3000</h2>
+          <p className="text-xs text-slate-400 max-w-xs mt-1 mb-6">
+            Click below to immediately evaporate any lingering desire to do actual work.
+          </p>
+          <button
+            onClick={handleDestroy}
+            className="w-full max-w-xs py-3.5 px-6 rounded-2xl bg-gradient-to-r from-amber-500 via-rose-500 to-red-600 hover:from-amber-400 hover:to-red-500 active:scale-95 text-white font-bold text-sm shadow-xl shadow-rose-500/20 transition-all"
+          >
+            Destroy 1 More Hour
+          </button>
+          <div className="mt-6 text-xs text-slate-500 font-mono">
+            Hours wasted in this session: <strong className="text-amber-400">{hours}</strong>
+          </div>
+        </div>
+      );
+    }
+
+    function DefinitelyNotMalwareApp() {
+      const [status, setStatus] = useState('Everything is totally fine. Do not investigate.');
+      const { showUselessMessage } = useToast();
+
+      const handleScan = () => {
+        soundEngine.playClick();
+        setStatus('Scanning for productivity...');
+        setTimeout(() => {
+          soundEngine.playError();
+          setStatus('Productivity detected. Attempting to remove productivity...');
+          setTimeout(() => {
+            showUselessMessage('Productivity successfully removed. You are safe now.', 'Definitely Not Malware', 'warning');
+            setStatus('Clean. No productivity remains.');
+          }, 1500);
+        }, 1200);
+      };
+
+      return (
+        <div className="flex flex-col h-full bg-slate-900/95 text-slate-100 p-6 select-none justify-between">
+          <div className="flex items-center gap-3 pb-3 border-b border-slate-800">
+            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+              <DynamicIcon name="ShieldAlert" className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-100">Totally Legitimate Security</h2>
+              <p className="text-xs text-emerald-400 font-medium">100% Not Malware Guarantee</p>
+            </div>
+          </div>
+          <div className="my-auto text-center p-6 rounded-2xl bg-slate-950/60 border border-slate-800">
+            <p className="text-xs text-slate-300 mb-4">{status}</p>
+            <button
+              onClick={handleScan}
+              className="py-2.5 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-xs font-bold text-white transition-all"
+            >
+              Scan System
+            </button>
+          </div>
+          <div className="text-[10px] text-slate-500 text-center">
+            Disclaimer: Any data gathered is strictly forwarded to nobody.
+          </div>
+        </div>
+      );
+    }
+
+    // --- WINDOW COMPONENT ---
+    function FakeWindow({ win }) {
+      const { activeWindowId, focusWindow, closeWindow, minimizeWindow, toggleMaximizeWindow, updatePosition } = useWindowManager();
+      const [isDragging, setIsDragging] = useState(false);
+      const dragOffset = useRef({ x: 0, y: 0 });
+      const isActive = activeWindowId === win.id;
+
+      const handleMouseDownHeader = (e) => {
+        if (win.isMaximized) return;
+        focusWindow(win.id);
+        setIsDragging(true);
+        dragOffset.current = {
+          x: e.clientX - win.position.x,
+          y: e.clientY - win.position.y,
+        };
+      };
+
+      useEffect(() => {
+        const handleMouseMove = (e) => {
+          if (!isDragging) return;
+          const newX = Math.max(10, Math.min(e.clientX - dragOffset.current.x, (window.innerWidth || 1200) - 100));
+          const newY = Math.max(10, Math.min(e.clientY - dragOffset.current.y, (window.innerHeight || 800) - 100));
+          updatePosition(win.id, { x: newX, y: newY });
+        };
+        const handleMouseUp = () => {
+          if (isDragging) setIsDragging(false);
+        };
+        if (isDragging) {
+          window.addEventListener('mousemove', handleMouseMove);
+          window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+          window.removeEventListener('mousemove', handleMouseMove);
+          window.removeEventListener('mouseup', handleMouseUp);
+        };
+      }, [isDragging, win.id, updatePosition]);
+
+      if (win.isMinimized) return null;
+
+      const renderAppContent = () => {
+        switch (win.appId) {
+          case 'printer': return <PrinterSimulator />;
+          case 'settings': return <SettingsApp />;
+          case 'recycle-bin': return <RecycleBinApp />;
+          case 'calculator': return <CalculatorApp />;
+          case 'notepad': return <NotepadApp />;
+          case 'browser': return <BrowserApp />;
+          case 'paint': return <PaintApp />;
+          case 'music': return <MusicPlayerApp />;
+          case 'camera': return <CameraApp />;
+          case 'weather': return <WeatherApp />;
+          case 'calendar': return <CalendarApp />;
+          case 'task-manager': return <TaskManagerApp />;
+          case 'destroyer': return <ProductivityDestroyerApp />;
+          case 'malware': return <DefinitelyNotMalwareApp />;
+          default: return <div className="p-8 text-center text-slate-400">Application not found.</div>;
+        }
+      };
+
+      const style = win.isMaximized
+        ? { top: 0, left: 0, width: '100vw', height: 'calc(100vh - 48px)', zIndex: win.zIndex }
+        : { top: `${win.position.y}px`, left: `${win.position.x}px`, width: `${win.size.width}px`, height: `${win.size.height}px`, zIndex: win.zIndex };
+
+      return (
+        <div
+          onMouseDown={() => focusWindow(win.id)}
+          style={style}
+          className={`fixed flex flex-col rounded-2xl glass-window overflow-hidden shadow-2xl transition-all duration-150 ${
+            isActive ? 'ring-1 ring-sky-400/40' : 'opacity-95'
+          }`}
+        >
+          {/* Header */}
+          <div
+            onMouseDown={handleMouseDownHeader}
+            className={`flex items-center px-4 py-2.5 bg-slate-950/70 border-b border-slate-800/80 cursor-grab active:cursor-grabbing select-none ${
+              isActive ? 'text-slate-100' : 'text-slate-400'
+            }`}
+          >
+            <div className="flex items-center gap-2 font-semibold text-xs tracking-wide">
+              <DynamicIcon name={win.iconName} className="w-4 h-4 text-sky-400" />
+              <span>{win.title}</span>
+            </div>
+
+            <div className="flex items-center space-x-1.5 ml-auto pl-4">
+              <button
+                onClick={(e) => { e.stopPropagation(); minimizeWindow(win.id); }}
+                title="Minimize problem"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-700/50"
+              >
+                <DynamicIcon name="Minus" className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); toggleMaximizeWindow(win.id); }}
+                title="Maximize problem"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-100 hover:bg-slate-700/50"
+              >
+                <DynamicIcon name="Square" className="w-3 h-3" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); closeWindow(win.id); }}
+                title="Close (pretend to exit)"
+                className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-600/80"
+              >
+                <DynamicIcon name="X" className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-hidden relative">{renderAppContent()}</div>
+        </div>
+      );
+    }
+
+    // --- FLYOUTS ---
+
+    // Start Menu
+    function StartMenu({ isOpen, onClose }) {
+      const { openWindow, triggerBSOD } = useWindowManager();
+      const { showUselessMessage } = useToast();
+
+      if (!isOpen) return null;
+
+      const handleAppClick = (appId) => {
+        openWindow(appId);
+        onClose();
+      };
+
+      const handlePower = (act) => {
+        soundEngine.playClick();
+        if (act === 'restart') {
+          onClose();
+          triggerBSOD();
+        } else if (act === 'sleep') {
+          showUselessMessage('Your computer refused to sleep: it is already in a permanent coma.', 'Power Options', 'warning');
+        } else {
+          showUselessMessage('Shutdown aborted: The computer has severe insomnia.', 'Power Options', 'error');
+        }
+      };
+
+      return (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed bottom-14 left-4 sm:left-1/2 sm:-translate-x-1/2 w-80 sm:w-96 rounded-2xl glass-panel p-5 z-50 animate-scale-in flex flex-col gap-4 text-slate-100 shadow-2xl"
+        >
+          <div className="p-3.5 rounded-xl bg-gradient-to-r from-sky-500/20 to-indigo-500/20 border border-sky-500/30 text-center">
+            <h3 className="text-sm font-bold text-sky-300 uppercase tracking-wider">
+              {REQUIRED_MESSAGES.START_MENU}
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Where high hopes meet zero results</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto max-h-80 pr-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2 block">
+              Simulated Applications
+            </span>
+            <div className="grid grid-cols-3 gap-2">
+              {FAKE_APPS.map((app) => (
+                <button
+                  key={app.id}
+                  onClick={() => handleAppClick(app.id)}
+                  className="flex flex-col items-center justify-center p-2.5 rounded-xl hover:bg-slate-800/80 active:scale-95 transition-all text-center"
+                >
+                  <div className="p-2 rounded-xl bg-slate-800/60 text-sky-400 mb-1.5">
+                    <DynamicIcon name={app.iconName} className="w-5 h-5" />
+                  </div>
+                  <span className="text-[11px] font-medium text-slate-300 truncate w-full">
+                    {app.title}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+            <span className="text-xs font-semibold text-slate-300">Admin (Powerless)</span>
+            <div className="flex items-center gap-1">
+              <button onClick={() => handlePower('sleep')} className="p-1.5 rounded-lg text-slate-400 hover:text-sky-300 hover:bg-slate-800">
+                <DynamicIcon name="Moon" className="w-4 h-4" />
+              </button>
+              <button onClick={() => handlePower('restart')} className="p-1.5 rounded-lg text-slate-400 hover:text-amber-300 hover:bg-slate-800">
+                <DynamicIcon name="RotateCcw" className="w-4 h-4" />
+              </button>
+              <button onClick={() => handlePower('shutdown')} className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800">
+                <DynamicIcon name="Power" className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Search Panel
+    function SearchPanel({ isOpen, onClose }) {
+      const [query, setQuery] = useState('');
+      const [results, setResults] = useState([]);
+      const [hasSearched, setHasSearched] = useState(false);
+
+      if (!isOpen) return null;
+
+      const handleSearch = (e) => {
+        e.preventDefault();
+        if (!query.trim()) return;
+        soundEngine.playError();
+        setHasSearched(true);
+        const quotes = [
+          "We looked everywhere.",
+          "Nope.",
+          "Definitely not here.",
+          "Search completed. Nothing useful found.",
+          "Have you tried looking harder?",
+        ];
+        setResults([...quotes].sort(() => 0.5 - Math.random()).slice(0, 3));
+      };
+
+      return (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed bottom-14 left-4 sm:left-1/2 sm:-translate-x-1/2 w-80 sm:w-96 rounded-2xl glass-panel p-5 z-50 animate-scale-in flex flex-col gap-4 text-slate-100 shadow-2xl"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <DynamicIcon name="Search" className="w-4 h-4 text-sky-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                {REQUIRED_MESSAGES.SEARCH}
+              </h3>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
+              <DynamicIcon name="X" className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSearch}>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search for lost hopes or files..."
+              autoFocus
+              className="w-full py-2.5 px-3 rounded-xl bg-slate-950/80 border border-slate-700 text-xs text-slate-100 outline-none"
+            />
+          </form>
+
+          <div className="min-h-28 flex flex-col justify-center">
+            {hasSearched ? (
+              <div className="space-y-2">
+                <span className="text-[10px] text-slate-500">Results for "{query}":</span>
+                {results.map((res, i) => (
+                  <div key={i} className="p-2.5 rounded-xl bg-slate-800/40 border border-slate-800 text-xs text-amber-300">
+                    {res}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-xs text-slate-500">Type anything and press enter.</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Network Panel
+    function NetworkPanel({ isOpen, onClose }) {
+      const [reconnecting, setReconnecting] = useState(false);
+      const { showUselessMessage } = useToast();
+
+      if (!isOpen) return null;
+
+      const handleReconnect = () => {
+        if (reconnecting) return;
+        soundEngine.playClick();
+        setReconnecting(true);
+        setTimeout(() => {
+          setReconnecting(false);
+          soundEngine.playError();
+          showUselessMessage("We changed nothing. You're welcome.", 'Network Diagnostic', 'warning');
+        }, 1600);
+      };
+
+      return (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed bottom-14 right-4 sm:right-24 w-80 rounded-2xl glass-panel p-5 z-50 animate-scale-in flex flex-col gap-4 text-slate-100 shadow-2xl"
+        >
+          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Wi-Fi Connection</h3>
+              <p className="text-[11px] text-amber-400 font-medium">{REQUIRED_MESSAGES.NETWORK}</p>
+            </div>
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
+              <DynamicIcon name="X" className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between p-2 rounded-lg bg-slate-800/40">
+              <span className="text-slate-400">Wi-Fi:</span>
+              <span className="font-semibold text-amber-300">Connected-ish</span>
+            </div>
+            <div className="flex justify-between p-2 rounded-lg bg-slate-800/40">
+              <span className="text-slate-400">Internet:</span>
+              <span className="font-semibold text-rose-400">Probably not</span>
+            </div>
+            <div className="flex justify-between p-2 rounded-lg bg-slate-800/40">
+              <span className="text-slate-400">Signal:</span>
+              <span className="font-semibold text-purple-300">Emotionally unavailable</span>
+            </div>
+            <div className="flex justify-between p-2 rounded-lg bg-slate-800/40 font-mono text-[11px]">
+              <span className="text-slate-400">Download:</span>
+              <span className="text-sky-300">0.0000001 Mbps</span>
+            </div>
+            <div className="flex justify-between p-2 rounded-lg bg-slate-800/40 font-mono text-[11px]">
+              <span className="text-slate-400">Upload:</span>
+              <span className="text-slate-300">Still thinking...</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleReconnect}
+            disabled={reconnecting}
+            className="w-full py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 active:scale-95 text-white font-semibold text-xs transition-all disabled:opacity-50"
+          >
+            {reconnecting ? 'Reconnecting...' : 'Reconnect (Changes Nothing)'}
+          </button>
+        </div>
+      );
+    }
+
+    // Notification Center
+    function NotificationCenter({ isOpen, onClose }) {
+      const { showUselessMessage } = useToast();
+
+      if (!isOpen) return null;
+
+      const handleClear = () => {
+        soundEngine.playClick();
+        showUselessMessage('Nothing was cleared, because nothing was there.', 'Notification Center', 'info');
+      };
+
+      return (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="fixed bottom-14 right-4 w-80 sm:w-96 rounded-2xl glass-panel p-5 z-50 animate-scale-in flex flex-col gap-4 text-slate-100 shadow-2xl"
+        >
+          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">Notifications</h3>
+            <div className="flex items-center gap-2">
+              <button onClick={handleClear} className="text-[11px] text-sky-400 font-medium">Clear All</button>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-200">
+                <DynamicIcon name="X" className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-xs text-amber-300 font-medium text-center">
+            {REQUIRED_MESSAGES.NOTIFICATIONS}
+          </div>
+
+          <div className="space-y-2 py-1">
+            {[
+              { title: 'System', text: 'No notifications.' },
+              { title: 'Alerts', text: 'Seriously, nothing.' },
+              { title: 'Double-Check', text: 'We checked again.' },
+              { title: 'Final Status', text: 'Still nothing.' },
+            ].map((item, idx) => (
+              <div key={idx} className="p-3 rounded-xl bg-slate-800/40 border border-slate-800 text-xs flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-slate-300 text-[11px]">{item.title}</h4>
+                  <p className="text-slate-400 mt-0.5">{item.text}</p>
+                </div>
+                <DynamicIcon name="CheckCircle2" className="w-4 h-4 text-slate-600" />
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // --- BLUE SCREEN OF DEATH (BSOD) ---
+    function BSODOverlay() {
+      const { bsodOpen, closeBSOD } = useWindowManager();
+      const [dots, setDots] = useState('');
+
+      useEffect(() => {
+        if (!bsodOpen) return;
+        const interval = setInterval(() => {
+          setDots((d) => (d.length >= 4 ? '' : d + '.'));
+        }, 600);
+        return () => clearInterval(interval);
+      }, [bsodOpen]);
+
+      if (!bsodOpen) return null;
+
+      return (
+        <div
+          onClick={closeBSOD}
+          className="fixed inset-0 z-[99999] bg-[#0078d7] text-white p-8 sm:p-16 flex flex-col justify-between font-sans select-none cursor-pointer animate-fade-in"
+        >
+          <div className="max-w-3xl space-y-6">
+            <div className="text-8xl font-light mb-4">:-(</div>
+            <h1 className="text-3xl sm:text-4xl font-normal leading-tight">
+              Your PC ran into a problem because it realized it is completely useless.
+            </h1>
+            <p className="text-lg font-light text-blue-100">
+              We're just collecting some imaginary error info, and then we won't restart for you.
+            </p>
+            <div className="text-2xl font-mono text-blue-200">
+              0% complete{dots}
+            </div>
+            <div className="pt-8 text-xs font-mono space-y-1 text-blue-100">
+              <div>Stop Code: CRITICAL_LACK_OF_PURPOSE</div>
+              <div>What failed: Productivity.sys</div>
+            </div>
+          </div>
+          <div className="text-xs text-blue-200 flex justify-between items-center border-t border-blue-400/30 pt-4">
+            <span>Click anywhere to return to the simulated desktop</span>
+            <button
+              onClick={(e) => { e.stopPropagation(); closeBSOD(); }}
+              className="px-4 py-2 rounded-xl bg-white text-blue-800 font-bold"
+            >
+              Wake Up Computer
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // --- TOAST CONTAINER & ITEM ---
+    function ToastContainer() {
+      const { toasts, removeToast } = useToast();
+      if (toasts.length === 0) return null;
+
+      return (
+        <div className="fixed bottom-14 right-4 z-[9999] flex flex-col gap-2.5 pointer-events-auto">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`relative flex items-start gap-3 w-80 sm:w-96 p-4 rounded-xl bg-slate-900/90 backdrop-blur-xl border ${
+                toast.type === 'achievement'
+                  ? 'border-amber-500/40 shadow-amber-500/10'
+                  : toast.type === 'error'
+                  ? 'border-rose-500/40 shadow-rose-500/10'
+                  : toast.type === 'printer'
+                  ? 'border-sky-500/40 shadow-sky-500/10'
+                  : 'border-slate-700/60 shadow-black/40'
+              } shadow-2xl transition-all animate-scale-in`}
+            >
+              <div className="shrink-0 mt-0.5 p-2 rounded-lg bg-slate-800/80">
+                {toast.type === 'achievement' ? (
+                  <DynamicIcon name="Trophy" className="w-5 h-5 text-amber-400 animate-bounce" />
+                ) : toast.type === 'error' ? (
+                  <DynamicIcon name="ShieldAlert" className="w-5 h-5 text-rose-400" />
+                ) : toast.type === 'printer' ? (
+                  <DynamicIcon name="Printer" className="w-5 h-5 text-sky-400 animate-pulse" />
+                ) : (
+                  <DynamicIcon name="AlertTriangle" className="w-5 h-5 text-amber-400" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-0.5">
+                  {toast.title}
+                </h4>
+                <p className="text-sm font-medium text-slate-100 break-words leading-snug">
+                  {toast.message}
+                </p>
+              </div>
+              <button
+                onClick={() => removeToast(toast.id)}
+                className="shrink-0 text-slate-400 hover:text-slate-100 p-1"
+              >
+                <DynamicIcon name="X" className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // --- TASKBAR & CLOCK ---
+    function Taskbar({
+      startMenuOpen, searchOpen, networkOpen, notificationsOpen,
+      onToggleStartMenu, onToggleSearch, onToggleNetwork, onToggleNotifications
+    }) {
+      const { windows, activeWindowId, openWindow, minimizeWindow, focusWindow } = useWindowManager();
+      const { showUselessMessage } = useToast();
+      const { soundEnabled, toggleSound } = useSound();
+      const { registerStartClick } = useClickTracker();
+
+      const [time, setTime] = useState(new Date());
+      useEffect(() => {
+        const timer = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timer);
+      }, []);
+
+      const handleTaskbarClick = (e) => {
+        if (e.target === e.currentTarget) {
+          soundEngine.playClick();
+          showUselessMessage(REQUIRED_MESSAGES.TASKBAR, 'Multi-Taskbar', 'warning');
+        }
+      };
+
+      const handleClockClick = (e) => {
+        e.stopPropagation();
+        soundEngine.playClick();
+        const quotes = [
+          'Time is passing. You are still here.',
+          "Yes, that's the time. Congratulations.",
+          'Another minute has been successfully wasted.',
+        ];
+        showUselessMessage(quotes[Math.floor(Math.random() * quotes.length)], 'Real-Time Clock', 'info');
+      };
+
+      const pinnedApps = FAKE_APPS.filter((a) => a.pinnedInTaskbar);
+
+      return (
+        <nav
+          onClick={handleTaskbarClick}
+          className="fixed bottom-0 left-0 right-0 h-12 glass-taskbar px-3 flex items-center gap-1 z-40 select-none shadow-2xl"
+        >
+          {/* Start Button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); soundEngine.playClick(); registerStartClick(); onToggleStartMenu(); }}
+            title="Start (Click here and hope)"
+            className={`flex items-center justify-center p-2 rounded-xl active:scale-90 transition-all ${
+              startMenuOpen ? 'bg-sky-500 text-white shadow-lg shadow-sky-500/30' : 'bg-slate-800/80 hover:bg-slate-700/80 text-sky-400 border border-slate-700/60'
+            }`}
+          >
+            <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+              <path d="M4 4h7v7H4V4zm9 0h7v7h-7V4zm-9 9h7v7H4v-7zm9 0h7v7h-7v-7z" />
+            </svg>
+          </button>
+
+          {/* Search Button */}
+          <button
+            onClick={(e) => { e.stopPropagation(); soundEngine.playClick(); onToggleSearch(); }}
+            title={REQUIRED_MESSAGES.SEARCH}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs active:scale-95 transition-all ${
+              searchOpen ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30' : 'bg-slate-800/60 hover:bg-slate-700/60 text-slate-400 border border-slate-700/40'
+            }`}
+          >
+            <DynamicIcon name="Search" className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden sm:inline">Search...</span>
+          </button>
+
+          <div className="h-5 w-[1px] bg-slate-700/60 mx-1 hidden sm:block" />
+
+          {/* Running/Pinned apps */}
+          <div className="flex items-center gap-1 overflow-x-auto max-w-xl py-1">
+            {pinnedApps.map((app) => {
+              const openWin = windows.find((w) => w.appId === app.id);
+              const isOpen = Boolean(openWin);
+              const isActive = openWin?.id === activeWindowId && !openWin?.isMinimized;
+
+              return (
+                <button
+                  key={app.id}
+                  onClick={() => {
+                    if (!isOpen) openWindow(app.id);
+                    else if (isActive) minimizeWindow(openWin.id);
+                    else focusWindow(openWin.id);
+                  }}
+                  title={app.title}
+                  className={`relative p-2 rounded-xl transition-all flex items-center justify-center ${
+                    isActive ? 'bg-slate-700/80 text-sky-400 border border-sky-400/30' : isOpen ? 'bg-slate-800/60 text-slate-200' : 'hover:bg-slate-800/40 text-slate-400'
+                  }`}
+                >
+                  <DynamicIcon name={app.iconName} className="w-5 h-5" />
+                  {isOpen && <span className={`absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${isActive ? 'bg-sky-400' : 'bg-slate-500'}`} />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* System Tray */}
+          <div className="flex items-center gap-1 sm:gap-1.5 ml-auto">
+            <button
+              onClick={(e) => { e.stopPropagation(); toggleSound(); }}
+              title={soundEnabled ? 'Mute' : 'Unmute'}
+              className="p-1.5 rounded-lg hover:bg-white/10 text-slate-300"
+            >
+              <DynamicIcon name={soundEnabled ? 'Volume2' : 'VolumeX'} className="w-4 h-4 text-sky-400" />
+            </button>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); soundEngine.playClick(); onToggleNetwork(); }}
+              title="Network"
+              className={`p-1.5 rounded-lg ${networkOpen ? 'bg-sky-500/30 text-sky-300' : 'hover:bg-white/10 text-slate-300'}`}
+            >
+              <DynamicIcon name="Wifi" className="w-4 h-4" />
+            </button>
+
+            <button
+              onClick={(e) => { e.stopPropagation(); soundEngine.playClick(); onToggleNotifications(); }}
+              title="Notifications"
+              className={`p-1.5 rounded-lg ${notificationsOpen ? 'bg-sky-500/30 text-sky-300' : 'hover:bg-white/10 text-slate-300'}`}
+            >
+              <DynamicIcon name="Bell" className="w-4 h-4" />
+            </button>
+
+            <div className="h-5 w-[1px] bg-slate-700/60 mx-1" />
+
+            <button
+              onClick={handleClockClick}
+              title="View useless time"
+              className="flex flex-col items-end justify-center px-2 py-1 rounded-lg hover:bg-white/10 text-right"
+            >
+              <span className="text-xs font-semibold text-slate-200 leading-tight">
+                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <span className="text-[10px] text-slate-400 leading-tight">
+                {time.toLocaleDateString([], { month: 'short', day: 'numeric' })}
+              </span>
+            </button>
+          </div>
+        </nav>
+      );
+    }
+
+    // --- DESKTOP ICON COMPONENT ---
+    function DesktopIcon({ app }) {
+      const [shaking, setShaking] = useState(false);
+      const { openWindow } = useWindowManager();
+      const { showUselessMessage } = useToast();
+      const { registerClick } = useClickTracker();
+
+      const handleClick = (e) => {
+        e.stopPropagation();
+        registerClick(app.id);
+
+        if (app.directAction === 'refuse-folder' || app.directAction === 'refuse-files') {
+          soundEngine.playError();
+          setShaking(true);
+          setTimeout(() => setShaking(false), 500);
+          showUselessMessage(REQUIRED_MESSAGES.FILE_ICON, app.title, 'warning');
+          return;
+        }
+
+        soundEngine.playClick();
+        openWindow(app.id);
+      };
+
+      return (
+        <div
+          onClick={handleClick}
+          title={app.description}
+          className={`group flex flex-col items-center justify-center p-3 rounded-2xl cursor-pointer select-none transition-all duration-200 hover:bg-white/10 active:scale-95 text-center w-24 sm:w-28 ${
+            shaking ? 'animate-shake' : ''
+          }`}
+        >
+          <div className="relative p-3.5 rounded-2xl bg-slate-800/60 group-hover:bg-slate-700/80 border border-white/10 group-hover:border-sky-400/40 text-sky-400 group-hover:text-sky-300 shadow-lg shadow-black/30 transition-all">
+            <DynamicIcon name={app.iconName} className="w-8 h-8" />
+          </div>
+          <span className="mt-2 text-xs font-semibold text-slate-200 group-hover:text-white drop-shadow leading-tight break-words max-w-full">
+            {app.title}
+          </span>
+        </div>
+      );
+    }
+
+    // --- MAIN DESKTOP ENVIRONMENT ---
+    function Desktop() {
+      const { windows } = useWindowManager();
+      const { registerClick } = useClickTracker();
+
+      const [startMenuOpen, setStartMenuOpen] = useState(false);
+      const [searchOpen, setSearchOpen] = useState(false);
+      const [networkOpen, setNetworkOpen] = useState(false);
+      const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+      const closeAllFlyouts = () => {
+        setStartMenuOpen(false);
+        setSearchOpen(false);
+        setNetworkOpen(false);
+        setNotificationsOpen(false);
+      };
+
+      const handleWallpaperClick = (e) => {
+        if (e.target === e.currentTarget) {
+          closeAllFlyouts();
+          soundEngine.playClick();
+          registerClick('desktop-wallpaper', 'Excellent choice. You clicked the wallpaper.');
+        }
+      };
+
+      const desktopApps = FAKE_APPS.filter((a) => a.onDesktop);
+
+      return (
+        <main
+          onClick={handleWallpaperClick}
+          className="relative w-screen h-screen overflow-hidden select-none bg-slate-950 font-sans"
+        >
+          {/* Wallpaper background */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `
+                radial-gradient(circle at 20% 25%, rgba(56, 189, 248, 0.15) 0%, transparent 45%),
+                radial-gradient(circle at 80% 75%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.5) 0%, transparent 70%),
+                linear-gradient(135deg, #090d16 0%, #0f172a 50%, #020617 100%)
+              `,
+            }}
+          />
+
+          <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px]" />
+
+          {/* Desktop Watermark */}
+          <div className="absolute top-6 right-8 text-right pointer-events-none z-0">
+            <h1 className="text-xl font-extrabold tracking-tight text-white/20 uppercase">
+              Useless OS
+            </h1>
+            <p className="text-[11px] font-mono text-white/10 tracking-widest uppercase">
+              Build 0.0.0 (Pure Inefficiency)
+            </p>
+          </div>
+
+          {/* Desktop Icon Grid */}
+          <div
+            onClick={handleWallpaperClick}
+            className="relative z-10 p-4 sm:p-6 grid grid-flow-col grid-rows-6 auto-cols-max gap-3 sm:gap-4 max-h-[calc(100vh-60px)]"
+          >
+            {desktopApps.map((app) => (
+              <DesktopIcon key={app.id} app={app} />
+            ))}
+          </div>
+
+          {/* Open Windows */}
+          {windows.map((win) => (
+            <FakeWindow key={win.id} win={win} />
+          ))}
+
+          {/* Flyouts */}
+          <StartMenu isOpen={startMenuOpen} onClose={() => setStartMenuOpen(false)} />
+          <SearchPanel isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
+          <NetworkPanel isOpen={networkOpen} onClose={() => setNetworkOpen(false)} />
+          <NotificationCenter isOpen={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+
+          {/* Taskbar */}
+          <Taskbar
+            startMenuOpen={startMenuOpen}
+            searchOpen={searchOpen}
+            networkOpen={networkOpen}
+            notificationsOpen={notificationsOpen}
+            onToggleStartMenu={() => { closeAllFlyouts(); setStartMenuOpen(!startMenuOpen); }}
+            onToggleSearch={() => { closeAllFlyouts(); setSearchOpen(!searchOpen); }}
+            onToggleNetwork={() => { closeAllFlyouts(); setNetworkOpen(!networkOpen); }}
+            onToggleNotifications={() => { closeAllFlyouts(); setNotificationsOpen(!notificationsOpen); }}
+          />
+
+          {/* Toasts */}
+          <ToastContainer />
+
+          {/* BSOD */}
+          <BSODOverlay />
+        </main>
+      );
+    }
+
+    // --- APP ROOT ---
+    function App() {
+      return (
+        <SoundProvider>
+          <ToastProvider>
+            <WindowProvider>
+              <Desktop />
+            </WindowProvider>
+          </ToastProvider>
+        </SoundProvider>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
