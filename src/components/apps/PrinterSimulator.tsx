@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, CheckCircle2, AlertCircle, RefreshCw, FileText } from 'lucide-react';
+import { Printer, FileText } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 import { REQUIRED_MESSAGES } from '../../data/uselessQuotes';
@@ -13,7 +13,7 @@ export const PrinterSimulator: React.FC = () => {
   const { playPrinterStep, playFanfare } = useSound();
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (printing) {
       interval = setInterval(() => {
         setProgress((prev) => {

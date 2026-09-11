@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, Sun, Volume2, Wifi, Palette, Cpu, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { Settings, Sun, Volume2, Wifi, Palette, Cpu, RefreshCw } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 import { REQUIRED_MESSAGES } from '../../data/uselessQuotes';

@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Zap, ShieldAlert, AlertOctagon, CheckCircle2, Flame } from 'lucide-react';
+import { Zap, ShieldAlert, Flame } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 
 export const ProductivityDestroyerApp: React.FC = () => {
   const [destroyedHours, setDestroyedHours] = useState<number>(1);
   const { showUselessMessage } = useToast();
-  const { playClick, playFanfare } = useSound();
+  const { playFanfare } = useSound();
 
   const handleDestroy = () => {
     playFanfare();

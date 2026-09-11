@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Camera, RefreshCw, Aperture, VideoOff } from 'lucide-react';
+import { Camera, Aperture } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 

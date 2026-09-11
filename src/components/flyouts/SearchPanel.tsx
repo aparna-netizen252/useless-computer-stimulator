@@ -12,7 +12,7 @@ export const SearchPanel: React.FC<SearchPanelProps> = ({ isOpen, onClose }) => 
   const [query, setQuery] = useState<string>('');
   const [results, setResults] = useState<string[]>([]);
   const [hasSearched, setHasSearched] = useState<boolean>(false);
-  const { playClick, playError } = useSound();
+  const { playError } = useSound();
 
   if (!isOpen) return null;
 

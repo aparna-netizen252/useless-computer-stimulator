@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useWindowManager } from '../../context/WindowContext';
 import { useSound } from '../../context/SoundContext';
-import { QrCode, RefreshCw } from 'lucide-react';
+import { QrCode } from 'lucide-react';
 
 export const BSODOverlay: React.FC = () => {
   const { bsodOpen, closeBSOD } = useWindowManager();

@@ -3,7 +3,6 @@ import { Volume2, VolumeX, Wifi, Bell } from 'lucide-react';
 import { Clock } from './Clock';
 import { useSound } from '../../context/SoundContext';
 import { useToast } from '../../context/ToastContext';
-import { REQUIRED_MESSAGES } from '../../data/uselessQuotes';
 
 interface SystemTrayProps {
   onToggleNetwork: () => void;

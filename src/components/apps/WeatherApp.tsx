@@ -1,5 +1,5 @@
 import React from 'react';
-import { CloudSun, CloudRain, Sun, Wind, Droplets } from 'lucide-react';
+import { CloudSun, Wind, Droplets } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 

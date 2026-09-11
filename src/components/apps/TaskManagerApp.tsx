@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, XCircle, RefreshCw, Cpu, Layers } from 'lucide-react';
+import { Activity, XCircle, Cpu, Layers } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 import { FakeProcess } from '../../types/os';

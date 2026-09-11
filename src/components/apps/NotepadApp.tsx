@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileEdit, Save, Trash, HelpCircle, FileX } from 'lucide-react';
+import { Save, Trash } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 

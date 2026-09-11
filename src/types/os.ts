@@ -28,7 +28,7 @@ export interface WindowState {
   zIndex: number;
 }
 
-export type ToastType = 'default' | 'warning' | 'error' | 'success' | 'achievement' | 'printer';
+export type ToastType = 'default' | 'warning' | 'error' | 'success' | 'achievement' | 'printer' | 'info';
 
 export interface ToastItem {
   id: string;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Calendar, Plus, Clock, CheckCircle } from 'lucide-react';
+import { Calendar, Plus } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 

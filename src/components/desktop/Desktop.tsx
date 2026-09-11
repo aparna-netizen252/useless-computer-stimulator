@@ -10,13 +10,11 @@ import { NotificationCenter } from '../flyouts/NotificationCenter';
 import { BSODOverlay } from '../dialogs/BSODOverlay';
 import { ToastContainer } from '../ui/ToastContainer';
 import { useWindowManager } from '../../context/WindowContext';
-import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 import { useClickTracker } from '../../hooks/useClickTracker';
 
 export const Desktop: React.FC = () => {
   const { windows } = useWindowManager();
-  const { showUselessMessage } = useToast();
   const { playClick } = useSound();
   const { registerClick } = useClickTracker();
 

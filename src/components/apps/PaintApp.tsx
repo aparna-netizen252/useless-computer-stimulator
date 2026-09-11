@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Palette, Trash2, Download, Brush } from 'lucide-react';
+import { Palette, Trash2, Download } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 
@@ -7,7 +7,7 @@ export const PaintApp: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [color, setColor] = useState<string>('#38bdf8');
-  const [strokeCount, setStrokeCount] = useState<number>(0);
+  const [, setStrokeCount] = useState<number>(0);
   const { showUselessMessage } = useToast();
   const { playClick, playError } = useSound();
 

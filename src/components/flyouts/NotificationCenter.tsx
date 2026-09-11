@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, BellOff, X, Sparkles, CheckCheck } from 'lucide-react';
+import { Bell, X, CheckCheck } from 'lucide-react';
 import { REQUIRED_MESSAGES } from '../../data/uselessQuotes';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';

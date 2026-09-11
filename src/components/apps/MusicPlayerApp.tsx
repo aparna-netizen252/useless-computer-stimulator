@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Music, Play, Pause, SkipForward, SkipBack, VolumeX, Disc } from 'lucide-react';
+import { Music, Play, Pause, SkipForward, SkipBack, Disc } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 
@@ -10,7 +10,7 @@ export const MusicPlayerApp: React.FC = () => {
   const { playClick } = useSound();
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (isPlaying) {
       interval = setInterval(() => {
         setProgress((prev) => (prev >= 100 ? 0 : prev + 1));

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, ArrowLeft, ArrowRight, RotateCw, Globe, ShieldAlert, WifiOff } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, Globe, WifiOff } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 

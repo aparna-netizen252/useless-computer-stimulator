@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, RotateCcw, AlertTriangle, FileText, Sparkles } from 'lucide-react';
+import { Trash2, RotateCcw, FileText } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 import { REQUIRED_MESSAGES } from '../../data/uselessQuotes';

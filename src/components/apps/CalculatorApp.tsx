@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Calculator, Delete } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 

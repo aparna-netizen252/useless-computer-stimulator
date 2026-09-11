@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wifi, RefreshCw, X, AlertTriangle } from 'lucide-react';
+import { Wifi, RefreshCw, X } from 'lucide-react';
 import { REQUIRED_MESSAGES } from '../../data/uselessQuotes';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';

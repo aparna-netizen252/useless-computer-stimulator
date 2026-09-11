@@ -5,7 +5,7 @@ import { useWindowManager } from '../../context/WindowContext';
 import { useToast } from '../../context/ToastContext';
 import { useSound } from '../../context/SoundContext';
 import { DynamicIcon } from '../ui/DynamicIcon';
-import { Power, RotateCcw, Moon, Sparkles, User } from 'lucide-react';
+import { Power, RotateCcw, Moon, User } from 'lucide-react';
 import { AppId } from '../../types/os';
 
 interface StartMenuProps {
@@ -16,7 +16,7 @@ interface StartMenuProps {
 export const StartMenu: React.FC<StartMenuProps> = ({ isOpen, onClose }) => {
   const { openWindow, triggerBSOD } = useWindowManager();
   const { showUselessMessage } = useToast();
-  const { playClick, playError } = useSound();
+  const { playClick } = useSound();
 
   if (!isOpen) return null;
 
